@@ -16,12 +16,14 @@
 // under the License.
 
 extern crate thrift;
+#[macro_use]
+extern crate thrift_derive;
 
 pub mod base_one;
 pub mod base_two;
 pub mod midlayer;
-pub mod ultimate;
 pub mod recursive;
+pub mod ultimate;
 
 #[cfg(test)]
 mod tests {

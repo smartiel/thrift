@@ -18,6 +18,8 @@
 extern crate ordered_float;
 extern crate thrift;
 extern crate try_from;
+#[macro_use]
+extern crate thrift_derive;
 
 pub mod shared;
 pub mod tutorial;

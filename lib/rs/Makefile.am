@@ -41,6 +41,7 @@ clean-local:
 	-$(RM) Cargo.lock
 
 EXTRA_DIST = \
+	tserializable-derive \
 	src \
 	Cargo.toml \
 	README.md

@@ -548,6 +548,7 @@ void t_rs_generator::render_attributes_and_includes() {
   // constructors take *all* struct parameters, which can trigger the "too many arguments" warning
   // some auto-gen'd types can be deeply nested. clippy recommends factoring them out which is hard to autogen
   f_gen_ << "#![allow(clippy::too_many_arguments, clippy::type_complexity)]" << endl;
+
   // prevent rustfmt from running against this file
   // lines are too long, code is (thankfully!) not visual-indented, etc.
   f_gen_ << "#![cfg_attr(rustfmt, rustfmt_skip)]" << endl;
@@ -567,7 +568,7 @@ void t_rs_generator::render_attributes_and_includes() {
   f_gen_ << "use std::rc::Rc;" << endl;
   f_gen_ << endl;
   f_gen_ << "use thrift::{ApplicationError, ApplicationErrorKind, ProtocolError, ProtocolErrorKind, TThriftClient};" << endl;
-  f_gen_ << "use thrift::protocol::{TFieldIdentifier, TListIdentifier, TMapIdentifier, TMessageIdentifier, TMessageType, TInputProtocol, TOutputProtocol, TSetIdentifier, TStructIdentifier, TType};" << endl;
+  f_gen_ << "use thrift::protocol::{TFieldIdentifier, TListIdentifier, TMapIdentifier, TMessageIdentifier, TMessageType, TInputProtocol, TOutputProtocol, TSetIdentifier, TStructIdentifier, TType, TSerializable};" << endl;
   f_gen_ << "use thrift::protocol::field_id;" << endl;
   f_gen_ << "use thrift::protocol::verify_expected_message_type;" << endl;
   f_gen_ << "use thrift::protocol::verify_expected_sequence_number;" << endl;
@@ -870,13 +871,12 @@ void t_rs_generator::generate_typedef(t_typedef* ttypedef) {
 void t_rs_generator::generate_enum(t_enum* tenum) {
   string enum_name(rust_camel_case(tenum->get_name()));
   render_enum_definition(tenum, enum_name);
-  render_enum_impl(enum_name);
   render_enum_conversion(tenum, enum_name);
 }
 
 void t_rs_generator::render_enum_definition(t_enum* tenum, const string& enum_name) {
   render_rustdoc((t_doc*) tenum);
-  f_gen_ << "#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]" << endl;
+  f_gen_ << "#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, TSerializable)]" << endl;
   f_gen_ << "pub enum " << enum_name << " {" << endl;
   indent_up();
 
@@ -1001,6 +1001,20 @@ void t_rs_generator::render_struct(
   render_type_comment(struct_name);
   render_struct_definition(struct_name, tstruct, struct_type);
   render_struct_impl(struct_name, tstruct, struct_type);
+  if (struct_type == t_rs_generator::T_ARGS){
+      // TODO add an impl to get a "thrift version" of the struct (i.e the one corresponding to thrif protocol)
+      f_gen_ << "impl " << struct_name << " {" << endl;
+      f_gen_ << "    fn get_thrift_name() -> &'static str {" << endl;
+      f_gen_ << "        \"" << tstruct->get_name() << "\"" << endl;
+      f_gen_ << "    }" << endl;
+      f_gen_ << "}" << endl;
+  }else{
+      f_gen_ << "impl " << struct_name << " {" << endl;
+      f_gen_ << "    fn get_thrift_name() -> &'static str {" << endl;
+      f_gen_ << "        \"" << struct_name << "\"" << endl;
+      f_gen_ << "    }" << endl;
+      f_gen_ << "}" << endl;
+  }
   if (struct_type == t_rs_generator::T_REGULAR || struct_type == t_rs_generator::T_EXCEPTION) {
     render_struct_default_trait_impl(struct_name, tstruct);
   }
@@ -1015,7 +1029,7 @@ void t_rs_generator::render_struct_definition(
   t_rs_generator::e_struct_type struct_type
 ) {
   render_rustdoc((t_doc*) tstruct);
-  f_gen_ << "#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]" << endl;
+  f_gen_ << "#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, TSerializable)]" << endl;
   f_gen_ << visibility_qualifier(struct_type) << "struct " << struct_name << " {" << endl;
 
   // render the members
@@ -1138,9 +1152,6 @@ void t_rs_generator::render_struct_impl(
   if (struct_type == t_rs_generator::T_REGULAR || struct_type == t_rs_generator::T_EXCEPTION) {
     render_struct_constructor(struct_name, tstruct, struct_type);
   }
-
-  render_struct_sync_read(struct_name, tstruct, struct_type);
-  render_struct_sync_write(tstruct, struct_type);
 
   if (struct_type == t_rs_generator::T_RESULT) {
     render_result_struct_to_result_method(tstruct);
@@ -1361,7 +1372,7 @@ void t_rs_generator::render_union_definition(const string& union_name, t_struct*
     throw "cannot generate rust enum with 0 members"; // may be valid thrift, but it's invalid rust
   }
 
-  f_gen_ << "#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]" << endl;
+  f_gen_ << "#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, TSerializable)]" << endl;
   f_gen_ << "pub enum " << union_name << " {" << endl;
   indent_up();
 
@@ -1381,12 +1392,14 @@ void t_rs_generator::render_union_definition(const string& union_name, t_struct*
 }
 
 void t_rs_generator::render_union_impl(const string& union_name, t_struct* tstruct) {
+  (void)tstruct;
   f_gen_ << "impl " << union_name << " {" << endl;
   indent_up();
-
-  render_union_sync_read(union_name, tstruct);
-  render_union_sync_write(union_name, tstruct);
-
+  f_gen_ << "fn get_thrift_name() -> &'static str {" << endl;
+  indent_up();
+  f_gen_ << "\""<< union_name << "\"" << endl;
+  indent_down();
+  f_gen_ << "}" << endl;
   indent_down();
   f_gen_ << "}" << endl;
   f_gen_ << endl;

@@ -90,6 +90,7 @@ mod binary;
 mod compact;
 mod multiplexed;
 mod stored;
+mod tserializable;
 
 pub use self::binary::{
     TBinaryInputProtocol, TBinaryInputProtocolFactory, TBinaryOutputProtocol,
@@ -101,6 +102,7 @@ pub use self::compact::{
 };
 pub use self::multiplexed::TMultiplexedOutputProtocol;
 pub use self::stored::TStoredInputProtocol;
+pub use self::tserializable::TSerializable;
 
 // Default maximum depth to which `TInputProtocol::skip` will skip a Thrift
 // field. A default is necessary because Thrift structs or collections may
@@ -577,14 +579,18 @@ where
 /// ```
 pub trait TOutputProtocolFactory {
     /// Create a `TOutputProtocol` that writes bytes to `transport`.
-    fn create(&self, transport: Box<dyn TWriteTransport + Send>) -> Box<dyn TOutputProtocol + Send>;
+    fn create(&self, transport: Box<dyn TWriteTransport + Send>)
+        -> Box<dyn TOutputProtocol + Send>;
 }
 
 impl<T> TOutputProtocolFactory for Box<T>
 where
     T: TOutputProtocolFactory + ?Sized,
 {
-    fn create(&self, transport: Box<dyn TWriteTransport + Send>) -> Box<dyn TOutputProtocol + Send> {
+    fn create(
+        &self,
+        transport: Box<dyn TWriteTransport + Send>,
+    ) -> Box<dyn TOutputProtocol + Send> {
         (**self).create(transport)
     }
 }

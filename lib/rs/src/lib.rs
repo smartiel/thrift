@@ -50,8 +50,8 @@
 #![deny(bare_trait_objects)]
 
 extern crate byteorder;
-extern crate ordered_float;
 extern crate integer_encoding;
+extern crate ordered_float;
 extern crate threadpool;
 
 #[macro_use]
@@ -88,4 +88,4 @@ pub use autogen::*;
 pub type Result<T> = std::result::Result<T, self::Error>;
 
 // Re-export ordered-float, since it is used by the generator
-pub use ordered_float::OrderedFloat as OrderedFloat;
+pub use ordered_float::OrderedFloat;
